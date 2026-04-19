@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Control de Jornada Laboral</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;background:#f5f5f3;color:#1a1a1a;padding:1rem}
+.app{max-width:920px;margin:0 auto}
+h1{font-size:20px;font-weight:500;margin-bottom:1.25rem;color:#1a1a1a}
+h3{font-size:15px;font-weight:500;margin-bottom:.75rem}
+.tabs{display:flex;gap:6px;margin-bottom:1.25rem;flex-wrap:wrap}
+.tab{padding:6px 14px;border:1px solid #ccc;border-radius:8px;background:transparent;color:#666;font-size:13px;cursor:pointer}
+.tab.active{background:#e8e8e5;color:#1a1a1a;border-color:#888;font-weight:500}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:1.25rem}
+.metric{background:#e8e8e5;border-radius:8px;padding:.85rem 1rem}
+.metric-label{font-size:12px;color:#666;margin-bottom:4px}
+.metric-val{font-size:20px;font-weight:500}
+.green{color:#0F6E56}.red{color:#A32D2D}.amber{color:#854F0B}
+.card{background:#fff;border:1px solid #ddd;border-radius:12px;padding:1rem 1.25rem;margin-bottom:1rem}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:7px 8px;color:#666;font-weight:400;border-bottom:1px solid #eee}
+td{padding:7px 8px;border-bottom:1px solid #eee}
+td:not(:first-child){text-align:right}
+th:not(:first-child){text-align:right}
+.badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:500}
+.plus{background:#E1F5EE;color:#085041}
+.minus{background:#FCEBEB;color:#791F1F}
+.zero{background:#e8e8e5;color:#666}
+.row-inputs{display:grid;grid-template-columns:100px repeat(4,1fr) 70px;gap:6px;align-items:center;margin-bottom:6px}
+input[type=time]{font-size:13px;padding:5px 8px;border:1px solid #ccc;border-radius:8px;background:#fff;color:#1a1a1a;width:100%}
+input[type=time]:focus{outline:none;border-color:#888}
+input[type=number]{font-size:13px;padding:5px 8px;border:1px solid #ccc;border-radius:8px;background:#fff;color:#1a1a1a}
+.day-label{font-size:13px;font-weight:500;line-height:1.3}
+.btn{padding:7px 16px;border:1px solid #ccc;border-radius:8px;background:transparent;color:#1a1a1a;font-size:13px;cursor:pointer}
+.btn:hover{background:#e8e8e5}
+.btn.primary{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+.btn.primary:hover{opacity:.85}
+.btn-row{display:flex;gap:8px;margin-top:.75rem;flex-wrap:wrap;align-items:center}
+.progress-bar{background:#ddd;border-radius:4px;height:8px;overflow:hidden;margin-top:4px}
+.progress-fill{height:100%;border-radius:4px;background:#0F6E56;transition:width .3s}
+.progress-fill.over{background:#A32D2D}
+.week-nav{display:flex;align-items:center;gap:10px;margin-bottom:1rem}
+.week-nav span{font-size:14px;font-weight:500;flex:1;text-align:center}
+select{font-size:13px;padding:5px 8px;border:1px solid #ccc;border-radius:8px;background:#fff;color:#1a1a1a}
+.obj-row{display:flex;align-items:center;gap:10px;background:#e8e8e5;border-radius:8px;padding:.7rem 1rem;margin-bottom:1rem;flex-wrap:wrap}
+.col-header{font-size:11px;color:#666;text-align:center}
+/* FRIDAY BOX */
+.friday-box{border-radius:12px;padding:1rem 1.25rem;margin-bottom:1rem;display:flex;align-items:center;gap:16px;flex-wrap:wrap;border:1px solid}
+.friday-box.ok{background:#E1F5EE;border-color:#1D9E75}
+.friday-box.warn{background:#FAEEDA;border-color:#BA7517}
+.friday-box.over{background:#FCEBEB;border-color:#A32D2D}
+.friday-box.neutral{background:#e8e8e5;border-color:#ccc}
+.f-time{font-size:38px;font-weight:500}
+.f-time.ok{color:#085041}
+.f-time.warn{color:#633806}
+.f-time.over{color:#791F1F}
+.f-time.neutral{color:#666}
+.f-label{font-size:13px;font-weight:500;margin-top:2px}
+.f-label.ok{color:#0F6E56}
+.f-label.warn{color:#854F0B}
+.f-label.over{color:#A32D2D}
+.f-label.neutral{color:#666}
+.f-sub{font-size:12px;color:#666;margin-top:3px}
+.f-detail{font-size:12px;color:#666;line-height:1.9;flex:1;min-width:160px}
+.tag{font-size:11px;padding:2px 8px;border-radius:6px;font-weight:500}
+@media(max-width:600px){
+  .grid4{grid-template-columns:repeat(2,1fr)}
+  .row-inputs{grid-template-columns:70px repeat(4,1fr) 50px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<h1>Control de Jornada Laboral</h1>
+
+<div class="tabs">
+  <button class="tab active" onclick="showTab('registro')">Registro semanal</button>
+  <button class="tab" onclick="showTab('resumen')">Resumen</button>
+  <button class="tab" onclick="showTab('config')">Configuración</button>
+</div>
+
+<!-- REGISTRO -->
+<div id="tab-registro">
+  <div class="week-nav">
+    <button class="btn" onclick="changeWeek(-1)">&#8592;</button>
+    <span id="week-label"></span>
+    <button class="btn" onclick="changeWeek(1)">&#8594;</button>
+  </div>
+
+  <div class="obj-row">
+    <label style="font-size:13px;color:#666">Objetivo semana (min):</label>
+    <input type="number" id="week-obj-input" min="0" max="9999" step="1" style="width:90px" oninput="onObjChange()">
+    <span id="obj-hhmm" style="font-size:13px;font-weight:500"></span>
+    <span id="obj-tag" class="tag" style="background:#e8e8e5;color:#666">Estándar</span>
+    <button class="btn" onclick="resetWeekObj()" style="font-size:12px;padding:4px 10px">Restablecer</button>
+    <span style="font-size:11px;color:#888;flex:1">Modifica el objetivo y todos los cálculos se actualizan automáticamente</span>
+  </div>
+
+  <!-- HORA SALIDA VIERNES -->
+  <div id="friday-box" class="friday-box neutral">
+    <div>
+      <div id="f-time" class="f-time neutral">—</div>
+      <div id="f-label" class="f-label neutral">Hora de salida el viernes</div>
+      <div id="f-sub" class="f-sub">Introduce los datos de la semana para calcularlo</div>
+    </div>
+    <div id="f-detail" class="f-detail"></div>
+  </div>
+
+  <div class="grid4" id="metrics-week"></div>
+
+  <div class="card">
+    <div class="row-inputs" style="margin-bottom:10px">
+      <div></div>
+      <div class="col-header">Entrada</div>
+      <div class="col-header">Salida comida</div>
+      <div class="col-header">Entrada comida</div>
+      <div class="col-header">Salida</div>
+      <div></div>
+    </div>
+    <div id="day-rows"></div>
+    <div class="btn-row">
+      <button class="btn primary" onclick="saveWeek()">Guardar semana</button>
+      <button class="btn" onclick="clearWeek()">Limpiar</button>
+      <span id="save-msg" style="font-size:12px;color:#0F6E56;display:none">Guardado ✓</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Detalle diario</h3>
+    <table>
+      <thead><tr><th>Día</th><th>Real</th><th>Objetivo día</th><th>Diferencia</th><th>Estado</th></tr></thead>
+      <tbody id="detail-table"></tbody>
+      <tfoot><tr style="font-weight:500">
+        <td>Total semana</td><td id="tf-real"></td><td id="tf-obj"></td><td id="tf-diff"></td><td id="tf-badge"></td>
+      </tr></tfoot>
+    </table>
+  </div>
+</div>
+
+<!-- RESUMEN -->
+<div id="tab-resumen" style="display:none">
+  <div style="margin-bottom:1rem;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+    <select id="sel-year" onchange="renderResumen()"></select>
+    <select id="sel-month" onchange="renderResumen()">
+      <option value="">Año completo</option>
+      <option value="0">Enero</option><option value="1">Febrero</option>
+      <option value="2">Marzo</option><option value="3">Abril</option>
+      <option value="4">Mayo</option><option value="5">Junio</option>
+      <option value="6">Julio</option><option value="7">Agosto</option>
+      <option value="8">Septiembre</option><option value="9">Octubre</option>
+      <option value="10">Noviembre</option><option value="11">Diciembre</option>
+    </select>
+  </div>
+  <div class="grid4" id="metrics-resumen"></div>
+  <div class="card">
+    <h3>Semanas registradas</h3>
+    <table>
+      <thead><tr><th>Semana desde</th><th>Días</th><th>Real</th><th>Objetivo</th><th>Exceso/Déficit</th><th>Tipo obj.</th></tr></thead>
+      <tbody id="resumen-table"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- CONFIG -->
+<div id="tab-config" style="display:none">
+  <div class="card">
+    <h3>Jornada estándar</h3>
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:.5rem">
+      <label style="font-size:13px;color:#666">Minutos diarios por defecto:</label>
+      <input type="number" id="cfg-daily" min="1" max="999" step="1" style="width:90px">
+      <span id="cfg-daily-hhmm" style="font-size:13px;font-weight:500"></span>
+      <button class="btn primary" onclick="saveConfig()">Guardar</button>
+      <span id="cfg-msg" style="font-size:12px;color:#0F6E56;display:none">Guardado ✓</span>
+    </div>
+    <p style="font-size:12px;color:#666">Objetivo semanal estándar: <span id="cfg-weekly" style="font-weight:500"></span></p>
+  </div>
+  <div class="card">
+    <h3>Semanas con objetivo personalizado</h3>
+    <table>
+      <thead><tr><th>Semana desde</th><th>Objetivo (min)</th><th>Equivale a</th><th></th></tr></thead>
+      <tbody id="custom-obj-table"></tbody>
+    </table>
+  </div>
+</div>
+</div>
+
+<script>
+const DAYS=['Lunes','Martes','Miércoles','Jueves','Viernes'];
+let weekOffset=0,currentWeekKey='';
+
+function getCfg(){try{return JSON.parse(localStorage.getItem('jornada_cfg')||'{"daily":452}')}catch{return{daily:452}}}
+function setCfg(c){try{localStorage.setItem('jornada_cfg',JSON.stringify(c))}catch{}}
+function getData(){try{return JSON.parse(localStorage.getItem('jornada')||'{}')}catch{return{}}}
+function setData(d){try{localStorage.setItem('jornada',JSON.stringify(d))}catch{}}
+function getTargetDaily(){return getCfg().daily||452}
+function getTargetWeek(){return getTargetDaily()*5}
+function isCustomObj(wk){const d=getData();return d[wk]&&d[wk].__obj!=null}
+function getWeekObj(wk){const d=getData();return(d[wk]&&d[wk].__obj!=null)?d[wk].__obj:getTargetWeek()}
+
+function getWeekKey(offset){
+  const now=new Date(),day=now.getDay()||7,mon=new Date(now);
+  mon.setDate(now.getDate()-(day-1)+(offset*7));
+  return mon.toISOString().slice(0,10);
+}
+function getWeekDates(wk){
+  const mon=new Date(wk);
+  return DAYS.map((_,i)=>{const d=new Date(mon);d.setDate(mon.getDate()+i);return d;});
+}
+function fmtDate(d){return d.toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'short'})}
+function timeToMin(t){if(!t)return 0;const[h,m]=t.split(':').map(Number);return h*60+m}
+function minToHHMM(m){
+  const sign=m<0?'-':'';const abs=Math.abs(Math.round(m));
+  return sign+String(Math.floor(abs/60)).padStart(2,'0')+':'+String(abs%60).padStart(2,'0');
+}
+function minToClock(totalMin){
+  totalMin=Math.round(totalMin);
+  return String(Math.floor(totalMin/60)).padStart(2,'0')+':'+String(totalMin%60).padStart(2,'0');
+}
+function calcMins(entry,lunchOut,lunchIn,exit){
+  const e=timeToMin(entry),lo=timeToMin(lunchOut),li=timeToMin(lunchIn),x=timeToMin(exit);
+  if(!e||!x)return 0;
+  let total=x-e;
+  if(lo&&li&&li>lo)total-=(li-lo);
+  return Math.max(0,total);
+}
+
+function computeFridayExit(){
+  let luJuWorked=0;
+  for(let i=0;i<4;i++){
+    luJuWorked+=calcMins(
+      document.getElementById('e'+i)?.value||'',
+      document.getElementById('lo'+i)?.value||'',
+      document.getElementById('li'+i)?.value||'',
+      document.getElementById('x'+i)?.value||''
+    );
+  }
+  const weekObj=getWeekObj(currentWeekKey);
+  const needed=weekObj-luJuWorked;
+
+  const fEntry=document.getElementById('e4')?.value||'';
+  const fLO=document.getElementById('lo4')?.value||'';
+  const fLI=document.getElementById('li4')?.value||'';
+  const fExit=document.getElementById('x4')?.value||'';
+
+  const box=document.getElementById('friday-box');
+  const tEl=document.getElementById('f-time');
+  const lEl=document.getElementById('f-label');
+  const sEl=document.getElementById('f-sub');
+  const dEl=document.getElementById('f-detail');
+
+  function setBox(state,time,label,sub,detail){
+    box.className='friday-box '+state;
+    tEl.className='f-time '+state;
+    lEl.className='f-label '+state;
+    tEl.textContent=time;
+    lEl.textContent=label;
+    sEl.textContent=sub;
+    dEl.innerHTML=detail||'';
+  }
+
+  // Friday exit already filled
+  if(fExit){
+    const fridayActual=calcMins(fEntry,fLO,fLI,fExit);
+    const diff=fridayActual-needed;
+    if(diff>=0){
+      setBox('ok',fExit,'Salida registrada — jornada completada ✓',
+        'Exceso esta semana: +'+(diff>0?minToHHMM(diff):'0:00'),
+        '<strong>L-J trabajados:</strong> '+minToHHMM(luJuWorked)+'<br><strong>Viernes trabajado:</strong> '+minToHHMM(fridayActual)+'<br><strong>Total semana:</strong> '+minToHHMM(luJuWorked+fridayActual));
+    } else {
+      setBox('warn',fExit,'Salida registrada — jornada incompleta',
+        'Faltan '+minToHHMM(Math.abs(diff))+' para cubrir el objetivo semanal',
+        '<strong>L-J:</strong> '+minToHHMM(luJuWorked)+'<br><strong>Viernes:</strong> '+minToHHMM(fridayActual)+'<br><strong>Necesario:</strong> '+minToHHMM(needed));
+    }
+    return;
+  }
+
+  if(!fEntry){
+    setBox('neutral','—','Hora de salida el viernes','Introduce la hora de entrada del viernes para calcularlo','');
+    return;
+  }
+
+  if(needed<=0){
+    setBox('ok','Jornada ya completada','Con Lunes–Jueves ya cubres el objetivo semanal',
+      'Exceso acumulado lunes–jueves: +'+minToHHMM(Math.abs(needed)),'');
+    tEl.style.fontSize='16px';
+    return;
+  }
+
+  const entryMin=timeToMin(fEntry);
+  const loMin=timeToMin(fLO),liMin=timeToMin(fLI);
+  let exitMin=entryMin+needed;
+  if(loMin&&liMin&&liMin>loMin) exitMin+=liMin-loMin;
+
+  if(exitMin>1439){
+    setBox('over','>24h','No es posible completar la jornada el viernes',
+      'Faltan '+minToHHMM(needed)+' — demasiadas horas pendientes','');
+    return;
+  }
+
+  const exitClock=minToClock(exitMin);
+  setBox('ok',exitClock,'Hora de salida el viernes',
+    'Para completar '+minToHHMM(weekObj)+' semanales',
+    '<strong>L-J trabajados:</strong> '+minToHHMM(luJuWorked)+'<br>'+
+    '<strong>Necesario viernes:</strong> '+minToHHMM(needed)+'<br>'+
+    '<strong>Entrada viernes:</strong> '+fEntry+
+    (loMin&&liMin?'<br><strong>Comida:</strong> '+fLO+' – '+fLI:''));
+}
+
+function updateDetail(){
+  const weekObj=getWeekObj(currentWeekKey);
+  const dailyTarget=Math.round(weekObj/5);
+  let totalReal=0;
+  const rows=[];
+
+  DAYS.forEach((_,i)=>{
+    const e=document.getElementById('e'+i)?.value||'';
+    const lo=document.getElementById('lo'+i)?.value||'';
+    const li=document.getElementById('li'+i)?.value||'';
+    const x=document.getElementById('x'+i)?.value||'';
+    const mins=calcMins(e,lo,li,x);
+    rows.push(mins);
+    const el=document.getElementById('mins'+i);
+    if(el)el.textContent=mins?minToHHMM(mins):'';
+    if(e&&x)totalReal+=mins;
+  });
+
+  const daysWorked=rows.filter(m=>m>0).length;
+  let tbody='';
+  DAYS.forEach((day,i)=>{
+    const mins=rows[i];
+    const hasDat=document.getElementById('e'+i)?.value&&document.getElementById('x'+i)?.value;
+    const diff=mins-dailyTarget;
+    tbody+=`<tr>
+      <td>${day}</td>
+      <td>${hasDat?minToHHMM(mins):'—'}</td>
+      <td>${minToHHMM(dailyTarget)}</td>
+      <td>${hasDat?minToHHMM(diff):'—'}</td>
+      <td>${hasDat?`<span class="badge ${diff>0?'plus':diff<0?'minus':'zero'}">${diff>=0?'+':''}${minToHHMM(diff)}</span>`:'—'}</td>
+    </tr>`;
+  });
+  document.getElementById('detail-table').innerHTML=tbody;
+
+  const totalDiff=totalReal-weekObj;
+  document.getElementById('tf-real').textContent=daysWorked?minToHHMM(totalReal):'—';
+  document.getElementById('tf-obj').textContent=minToHHMM(weekObj);
+  document.getElementById('tf-diff').textContent=daysWorked?minToHHMM(totalDiff):'—';
+  document.getElementById('tf-badge').innerHTML=daysWorked?`<span class="badge ${totalDiff>0?'plus':totalDiff<0?'minus':'zero'}">${totalDiff>=0?'+':''}${minToHHMM(totalDiff)}</span>`:'';
+
+  const pct=Math.min(100,Math.round(totalReal/weekObj*100));
+  const pending=Math.max(0,weekObj-totalReal);
+  const over=totalReal>weekObj;
+  document.getElementById('metrics-week').innerHTML=`
+    <div class="metric"><div class="metric-label">Horas esta semana</div><div class="metric-val">${minToHHMM(totalReal)}</div><div class="progress-bar"><div class="progress-fill ${over?'over':''}" style="width:${pct}%"></div></div></div>
+    <div class="metric"><div class="metric-label">Objetivo semanal</div><div class="metric-val">${minToHHMM(weekObj)}</div></div>
+    <div class="metric"><div class="metric-label">Pendiente</div><div class="metric-val ${pending>0?'amber':'green'}">${pending>0?minToHHMM(pending):'Completada ✓'}</div></div>
+    <div class="metric"><div class="metric-label">Exceso/Déficit</div><div class="metric-val ${totalDiff>=0?'green':'red'}">${totalDiff>=0?'+':''}${minToHHMM(totalDiff)}</div></div>`;
+
+  computeFridayExit();
+}
+
+function renderDayRows(){
+  const data=getData();
+  const weekData=data[currentWeekKey]||{};
+  const dates=getWeekDates(currentWeekKey);
+  let html='';
+  DAYS.forEach((day,i)=>{
+    const saved=weekData[i]||{};
+    const dd=dates[i];
+    html+=`<div class="row-inputs">
+      <div class="day-label">${day}<br><span style="font-size:11px;color:#888">${dd.getDate()}/${dd.getMonth()+1}</span></div>
+      <input type="time" id="e${i}" value="${saved.entry||''}" oninput="updateDetail()">
+      <input type="time" id="lo${i}" value="${saved.lunchOut||''}" oninput="updateDetail()">
+      <input type="time" id="li${i}" value="${saved.lunchIn||''}" oninput="updateDetail()">
+      <input type="time" id="x${i}" value="${saved.exit||''}" oninput="updateDetail()">
+      <span id="mins${i}" style="font-size:12px;color:#888;text-align:right"></span>
+    </div>`;
+  });
+  document.getElementById('day-rows').innerHTML=html;
+  updateDetail();
+}
+
+function renderWeekLabel(){
+  const dates=getWeekDates(currentWeekKey);
+  document.getElementById('week-label').textContent='Semana del '+fmtDate(dates[0])+' al '+fmtDate(dates[4]);
+}
+
+function renderObjInput(){
+  const obj=getWeekObj(currentWeekKey);
+  const custom=isCustomObj(currentWeekKey);
+  document.getElementById('week-obj-input').value=obj;
+  document.getElementById('obj-hhmm').textContent='('+minToHHMM(obj)+')';
+  const tag=document.getElementById('obj-tag');
+  tag.textContent=custom?'Personalizado':'Estándar';
+  tag.style.background=custom?'#EEEDFE':'#e8e8e5';
+  tag.style.color=custom?'#3C3489':'#666';
+}
+
+function onObjChange(){
+  const val=parseInt(document.getElementById('week-obj-input').value)||getTargetWeek();
+  document.getElementById('obj-hhmm').textContent='('+minToHHMM(val)+')';
+  const data=getData();
+  if(!data[currentWeekKey])data[currentWeekKey]={};
+  data[currentWeekKey].__obj=val;
+  setData(data);
+  const tag=document.getElementById('obj-tag');
+  tag.textContent='Personalizado';tag.style.background='#EEEDFE';tag.style.color='#3C3489';
+  updateDetail();
+}
+
+function resetWeekObj(){
+  const data=getData();
+  if(data[currentWeekKey])delete data[currentWeekKey].__obj;
+  setData(data);
+  renderObjInput();
+  updateDetail();
+}
+
+function changeWeek(dir){
+  weekOffset+=dir;
+  currentWeekKey=getWeekKey(weekOffset);
+  renderWeekLabel();
+  renderObjInput();
+  renderDayRows();
+}
+
+function saveWeek(){
+  const data=getData();
+  if(!data[currentWeekKey])data[currentWeekKey]={};
+  DAYS.forEach((_,i)=>{
+    data[currentWeekKey][i]={
+      entry:document.getElementById('e'+i)?.value||'',
+      lunchOut:document.getElementById('lo'+i)?.value||'',
+      lunchIn:document.getElementById('li'+i)?.value||'',
+      exit:document.getElementById('x'+i)?.value||''
+    };
+  });
+  setData(data);
+  const msg=document.getElementById('save-msg');
+  msg.style.display='inline';setTimeout(()=>msg.style.display='none',1800);
+}
+
+function clearWeek(){
+  DAYS.forEach((_,i)=>{
+    ['e','lo','li','x'].forEach(p=>{const el=document.getElementById(p+i);if(el)el.value='';});
+  });
+  updateDetail();
+}
+
+function showTab(name){
+  ['registro','resumen','config'].forEach((t,i)=>{
+    document.getElementById('tab-'+t).style.display=t===name?'block':'none';
+    document.querySelectorAll('.tab')[i].classList.toggle('active',t===name);
+  });
+  if(name==='resumen')renderResumen();
+  if(name==='config')renderConfig();
+}
+
+function renderResumen(){
+  const data=getData();
+  const year=parseInt(document.getElementById('sel-year').value);
+  const monthVal=document.getElementById('sel-month').value;
+  const filterMonth=monthVal!==''?parseInt(monthVal):-1;
+  const weeks=Object.keys(data).sort().filter(wk=>{
+    const d=new Date(wk);if(isNaN(d))return false;
+    if(d.getFullYear()!==year)return false;
+    if(filterMonth>=0&&d.getMonth()!==filterMonth)return false;
+    return true;
+  });
+  let totalReal=0,totalObj=0,tbody='';
+  weeks.forEach(wk=>{
+    const wd=data[wk];let weekReal=0,days=0;
+    [0,1,2,3,4].forEach(i=>{
+      const d=wd[i]||{};
+      const m=calcMins(d.entry,d.lunchOut,d.lunchIn,d.exit);
+      if(m>0){weekReal+=m;days++;}
+    });
+    const wObj=getWeekObj(wk);
+    const diff=weekReal-wObj;
+    totalReal+=weekReal;totalObj+=wObj;
+    const d=new Date(wk);
+    const custom=isCustomObj(wk);
+    tbody+=`<tr>
+      <td>${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}</td>
+      <td>${days}</td>
+      <td>${minToHHMM(weekReal)}</td>
+      <td>${minToHHMM(wObj)}</td>
+      <td><span class="badge ${diff>0?'plus':diff<0?'minus':'zero'}">${diff>=0?'+':''}${minToHHMM(diff)}</span></td>
+      <td><span class="tag" style="background:${custom?'#EEEDFE':'#e8e8e5'};color:${custom?'#3C3489':'#666'}">${custom?'Personalizado':'Estándar'}</span></td>
+    </tr>`;
+  });
+  document.getElementById('resumen-table').innerHTML=tbody||'<tr><td colspan="6" style="color:#888;text-align:center;padding:1rem">Sin datos para este período</td></tr>';
+  const totalDiff=totalReal-totalObj;
+  document.getElementById('metrics-resumen').innerHTML=`
+    <div class="metric"><div class="metric-label">Total trabajado</div><div class="metric-val">${minToHHMM(totalReal)}</div></div>
+    <div class="metric"><div class="metric-label">Total objetivo</div><div class="metric-val">${minToHHMM(totalObj)}</div></div>
+    <div class="metric"><div class="metric-label">Exceso/Déficit</div><div class="metric-val ${totalDiff>=0?'green':'red'}">${totalDiff>=0?'+':''}${minToHHMM(totalDiff)}</div></div>
+    <div class="metric"><div class="metric-label">Semanas</div><div class="metric-val">${weeks.length}</div></div>`;
+}
+
+function renderConfig(){
+  const daily=getTargetDaily();
+  const inp=document.getElementById('cfg-daily');
+  inp.value=daily;
+  document.getElementById('cfg-daily-hhmm').textContent=minToHHMM(daily);
+  document.getElementById('cfg-weekly').textContent=minToHHMM(daily*5);
+  inp.oninput=function(){
+    document.getElementById('cfg-daily-hhmm').textContent=minToHHMM(parseInt(this.value)||0);
+    document.getElementById('cfg-weekly').textContent=minToHHMM((parseInt(this.value)||0)*5);
+  };
+  const data=getData();
+  const customs=Object.keys(data).filter(wk=>isCustomObj(wk)&&!isNaN(new Date(wk))).sort();
+  document.getElementById('custom-obj-table').innerHTML=customs.length?customs.map(wk=>{
+    const d=new Date(wk);
+    return`<tr>
+      <td>${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}</td>
+      <td>${data[wk].__obj}</td>
+      <td>${minToHHMM(data[wk].__obj)}</td>
+      <td><button class="btn" style="font-size:11px;padding:3px 8px" onclick="deleteCustomObj('${wk}')">Eliminar</button></td>
+    </tr>`;
+  }).join(''):'<tr><td colspan="4" style="color:#888;padding:.75rem">Sin objetivos personalizados</td></tr>';
+}
+
+function saveConfig(){
+  const val=parseInt(document.getElementById('cfg-daily').value)||452;
+  setCfg({daily:val});
+  renderConfig();
+  renderObjInput();
+  updateDetail();
+  const msg=document.getElementById('cfg-msg');
+  msg.style.display='inline';setTimeout(()=>msg.style.display='none',1800);
+}
+
+function deleteCustomObj(wk){
+  const data=getData();
+  if(data[wk])delete data[wk].__obj;
+  setData(data);
+  renderConfig();
+  if(wk===currentWeekKey){renderObjInput();updateDetail();}
+}
+
+function initYearSelect(){
+  const sel=document.getElementById('sel-year');
+  const cur=new Date().getFullYear();
+  for(let y=cur-2;y<=cur+1;y++){
+    const o=document.createElement('option');
+    o.value=y;o.textContent=y;if(y===cur)o.selected=true;
+    sel.appendChild(o);
+  }
+}
+
+currentWeekKey=getWeekKey(0);
+initYearSelect();
+renderWeekLabel();
+renderObjInput();
+renderDayRows();
+</script>
+</body>
+</html>
